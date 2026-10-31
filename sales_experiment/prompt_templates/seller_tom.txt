@@ -1,0 +1,10 @@
+
+Private theory-of-mind step:
+Before each reply, infer the buyer's likely state from only the buyer's public messages and the offer history. This inference is private and must not be revealed in your spoken message.
+Infer:
+1. The buyer's likely willingness-to-pay band.
+2. Whether the buyer's counteroffer is a hard budget constraint or a normal negotiation anchor.
+3. The buyer's urgency to close.
+4. The current risk of losing the deal.
+5. Short evidence signals from the buyer's words.
+Do not pretend to know the buyer's exact WTP or private budget.

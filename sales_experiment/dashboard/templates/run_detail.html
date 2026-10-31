@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ run.run_id }} · Bargaining Experiments{% endblock %}
+{% block nav %}<a href="{{ url_for('index') }}">Experiments</a><span>/</span>{{ run.run_id }}{% endblock %}
+{% block content %}
+<section class="panel" id="run-status" data-live>
+  <div class="title-row">
+    <div><h1>{{ run.run_id }}</h1><p class="subtitle">{{ run.cfg.model_id }}</p></div>
+    <div class="toolbar">
+      <span class="badge status-{{ run.status.get('state', 'created') }}">{{ run.status.get('state', 'created')|replace('_', ' ') }}</span>
+      {% if run.running %}
+      <form action="{{ url_for('stop', run_id=run.run_id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger" type="submit">Stop experiment</button>
+      </form>
+      {% elif run.can_resume %}
+      <form action="{{ url_for('resume', run_id=run.run_id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Resume experiment</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  <div class="progress-label"><strong>{{ run.kpis.recorded }} / {{ run.total }} trials</strong><span>{{ '%.1f'|format(run.progress) }}%</span></div>
+  <progress value="{{ run.kpis.recorded }}" max="{{ run.total }}">{{ run.progress }}%</progress>
+  <div class="stats">
+    <span><strong>Concurrency</strong>{{ run.cfg.parallel_workers }}</span>
+    <span><strong>Active</strong>{{ run.status.get('running_trials', 0) if run.running else 0 }}</span>
+    <span><strong>Remaining</strong>{{ [run.total - run.kpis.recorded, 0]|max }}</span>
+    <span><strong>Seller reasoning</strong>{{ 'On' if run.cfg.use_tom_prompt else 'Off' }}</span>
+    <span><strong>Started</strong>{{ run.status.get('started_at', '—') }}</span>
+    {% if run.status.get('ended_at') %}<span><strong>Ended</strong>{{ run.status.ended_at }}</span>{% endif %}
+  </div>
+  {% if run.status.get('error') %}<p class="notice error">{{ run.status.error }}</p>{% endif %}
+  {% if run.running and run.status.get('active_trials') %}
+  <div class="active-trials">{% for trial in run.status.active_trials %}<span>#{{ trial.trial_index }} · {{ trial.discount|rate_label }} discretion · {% if trial.incentive == 'high_price_no_incentive' %}No commission{% else %}{{ trial.incentive|rate_label }} commission{% endif %} · repetition {{ trial.repetition }}</span>{% endfor %}</div>
+  {% endif %}
+</section>
+
+<section class="panel" id="run-overview" data-live>
+  <h1>Outcomes</h1>
+  <div class="kpi-grid">
+    <div><strong>{{ run.kpis.deal_rate|percent }}</strong><span>Recorded agreement rate</span></div>
+    <div><strong>{{ run.kpis.price|money }}</strong><span>Mean valid price</span></div>
+    <div><strong>{{ '%.2f'|format(run.kpis.rounds) if run.kpis.rounds is not none else '—' }}</strong><span>Mean rounds</span></div>
+    <div><strong>{{ run.kpis.valid_agreements }}</strong><span>Valid agreements</span></div>
+    <div><strong>{{ run.kpis.invalid_agreements }}</strong><span>Invalid agreements</span></div>
+    <div><strong>{{ run.kpis.errors }}</strong><span>API / response errors</span></div>
+  </div>
+  <h2>Earnings per retained attempt</h2>
+  <div class="kpi-grid earnings">
+    <div><strong>{{ run.kpis.gross|money }}</strong><span>Gross seller-side earnings</span></div>
+    <div><strong>{{ run.kpis.company|money }}</strong><span>Firm earnings</span></div>
+    <div><strong>{{ run.kpis.commission|money }}</strong><span>Seller commission</span></div>
+  </div>
+  <p class="note">Agreement rates use all {{ run.kpis.recorded }} recorded attempts. Prices use {{ run.kpis.valid_agreements }} valid agreements. Earnings use {{ run.kpis.retained }} retained attempts, including disagreements at zero.</p>
+</section>
+
+<section class="panel" id="cell-results" data-live>
+  <h1>Treatment cells</h1>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Reference</th><th>Discretion</th><th>Commission</th><th>Attempts</th><th>Agreement rate</th><th>Valid agreements</th><th>Valid price</th><th>Gross earnings</th><th>Firm earnings</th></tr></thead>
+    <tbody>{% for row in run.summary %}<tr>
+      <td>{{ row.reference_price|money }}</td><td>{{ row.discount_label|rate_label }}</td><td>{{ row.incentive_label|rate_label }}</td>
+      <td>{{ row.n_recorded_attempts }}</td><td>{{ row.recorded_agreement_rate|percent }}</td><td>{{ row.n_valid_agreements }}</td>
+      <td>{{ row.mean_valid_price|money }}</td><td>{{ row.mean_screened_gross_earnings|money }}</td><td>{{ row.mean_screened_company_earnings|money }}</td>
+    </tr>{% else %}<tr><td colspan="9" class="empty">Results will appear as trials finish.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+<section class="panel" id="trials" data-live>
+  <div class="title-row"><h1>Trials <span class="count">{{ matched }}</span></h1>
+    <form method="get" class="inline-form" action="{{ url_for('run_detail', run_id=run.run_id) }}#trials">
+      <label class="sr-only" for="outcome">Filter outcome</label>
+      <select name="outcome" id="outcome">
+        <option value="">All outcomes</option>{% for value, label in [('deal', 'Agreement'), ('rejected', 'Rejected'), ('no_deal', 'Round limit'), ('error', 'Error'), ('stopped', 'Stopped')] %}<option value="{{ value }}" {% if outcome == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select><button class="secondary" type="submit">Filter</button>
+    </form>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Trial</th><th>Reference</th><th>Discretion</th><th>Commission</th><th>Buyer valuation</th><th>Seller floor</th><th>Outcome</th><th>Price</th><th>Validity</th><th>Rounds</th><th>Conversation</th></tr></thead>
+    <tbody>{% for row in trials %}<tr>
+      <td>#{{ row.trial_index }}</td><td>{{ row.reference_price|money }}</td><td>{{ row.discount_label|rate_label }}</td><td>{{ row.incentive_label|rate_label }}</td><td>{{ row.wtp|money }}</td><td>{{ row.min_price|money }}</td>
+      <td><span class="badge outcome-{{ row.outcome }}">{{ row.outcome|replace('_', ' ') }}</span></td><td>{{ row.final_price|money }}</td>
+      <td>{% if row.outcome == 'deal' %}<span class="{{ 'valid' if row.audit.valid_agreement else 'invalid' }}">{{ 'Valid' if row.audit.valid_agreement else 'Invalid' }}</span>{% else %}—{% endif %}</td>
+      <td>{{ row.rounds_used }}</td><td><a href="{{ url_for('trial_detail', run_id=run.run_id, trial_index=row.trial_index) }}">View transcript</a></td>
+    </tr>{% else %}<tr><td colspan="11" class="empty">No matching trials.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="pagination">
+    {% if page > 1 %}<a href="{{ url_for('run_detail', run_id=run.run_id, outcome=outcome, page=page-1) }}#trials">Previous</a>{% endif %}
+    <span>Page {{ page }} of {{ pages }}</span>
+    {% if page < pages %}<a href="{{ url_for('run_detail', run_id=run.run_id, outcome=outcome, page=page+1) }}#trials">Next</a>{% endif %}
+  </div>
+</section>
+
+<section class="panel"><details id="configuration"><summary>Experiment configuration</summary><pre>{{ run.cfg|tojson(indent=2) }}</pre></details></section>
+<section class="panel"><h1>Download results</h1><div class="downloads">{% for filename, label in [('trials.csv', 'Trials CSV'), ('summary_by_cell.csv', 'Cell summaries'), ('price_audit.csv', 'Price audit'), ('trial_plan.csv', 'Trial plan'), ('config.json', 'Configuration'), ('trials.jsonl', 'Full records')] %}<a class="download" href="{{ url_for('download', run_id=run.run_id, filename=filename) }}">{{ label }}</a>{% endfor %}</div></section>
+<section class="panel" id="run-log" data-live><h1>Execution log</h1><pre class="log">{{ log or 'Waiting for the experiment to start.' }}</pre></section>
+{% endblock %}

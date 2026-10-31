@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-bargaining-experiment"
+version = "1.0.0"
+description = "Bilateral LLM bargaining experiments with pricing discretion and commissions"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["openai>=1.40,<4", "python-dotenv>=1.0,<2", "flask>=3.0,<4"]
+
+[project.scripts]
+llm-bargaining = "sales_experiment.runner:main"
+llm-bargaining-dashboard = "sales_experiment.dashboard.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["sales_experiment*"]
+
+[tool.setuptools.package-data]
+sales_experiment = ["prompt_templates/*.txt", "prompt_templates/*.json", "prompt_templates/*.md"]
+"sales_experiment.dashboard" = ["templates/*.html", "static/*.css", "static/*.js"]

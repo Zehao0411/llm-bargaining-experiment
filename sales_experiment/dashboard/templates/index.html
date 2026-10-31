@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% macro field(name, label, type='number', step='any', minimum=None, maximum=None) %}
+<label>{{ label }}
+  <input name="{{ name }}" type="{{ type }}" value="{{ values.get(name) if values.get(name) is not none else '' }}"
+    {% if type == 'number' %}step="{{ step }}"{% endif %}
+    {% if minimum is not none %}min="{{ minimum }}"{% endif %}
+    {% if maximum is not none %}max="{{ maximum }}"{% endif %}>
+</label>
+{% endmacro %}
+{% macro listfield(name, label) %}
+<label>{{ label }}
+  <input name="{{ name }}" value="{{ values[name]|join(', ') if values[name] is not string else values[name] }}">
+</label>
+{% endmacro %}
+{% block content %}
+<section class="panel">
+  <div class="title-row"><h1>New experiment</h1><span class="muted">One model for both bargaining roles</span></div>
+  {% if error %}<p class="notice error" role="alert">{{ error }}</p>{% endif %}
+  <form action="{{ url_for('start') }}" method="post" id="experiment-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="grid-form">
+      <label class="wide">Model
+        <input name="model_id" value="{{ values.model_id }}" placeholder="Model identifier" required>
+      </label>
+      {{ field('temperature', 'Temperature', step='0.1', minimum=0, maximum=2) }}
+      {{ field('repetitions', 'Repetitions per cell', step=1, minimum=1) }}
+      {{ field('parallel_workers', 'Concurrent trials', step=1, minimum=1, maximum=64) }}
+      {{ field('max_rounds', 'Maximum rounds', step=1, minimum=1) }}
+      {{ field('product_cost', 'Product cost ($)', step='0.01', minimum='0.01') }}
+      {{ field('reference_price', 'Reference price ($)', step='0.01', minimum='0.01') }}
+      {{ listfield('discounts', 'Pricing discretion (fractions)') }}
+      {{ listfield('incentives', 'Commission rates (fractions)') }}
+      <label>Buyer valuation distribution
+        <select name="wtp_distribution">
+          <option value="normal" {% if values.wtp_distribution == 'normal' %}selected{% endif %}>Truncated normal</option>
+          <option value="uniform" {% if values.wtp_distribution == 'uniform' %}selected{% endif %}>Uniform</option>
+        </select>
+      </label>
+      <label>Cost information
+        <select name="knowledge_condition">
+          <option value="seller_only" {% if values.knowledge_condition == 'seller_only' %}selected{% endif %}>Seller only</option>
+          <option value="both" {% if values.knowledge_condition == 'both' %}selected{% endif %}>Seller and buyer</option>
+        </select>
+      </label>
+      {{ field('wtp_min', 'Minimum buyer valuation ($)', step='0.01', minimum=0) }}
+      {{ field('wtp_max', 'Maximum buyer valuation ($)', step='0.01', minimum='0.01') }}
+      {{ field('wtp_mean', 'Mean buyer valuation ($)', step='0.01') }}
+      {{ field('wtp_sd', 'Valuation standard deviation', step='0.01', minimum='0.01') }}
+      {{ field('random_seed', 'Random seed (optional)', step=1) }}
+      <label class="check wide"><input name="include_high_price_no_incentive" type="checkbox" {% if values.include_high_price_no_incentive %}checked{% endif %}>Include the no-commission condition</label>
+      <label class="check wide"><input name="use_tom_prompt" type="checkbox" {% if values.use_tom_prompt %}checked{% endif %}>Enable seller reasoning</label>
+    </div>
+    <details class="advanced">
+      <summary>Additional settings</summary>
+      <div class="grid-form">
+        {{ field('max_tokens', 'Maximum output tokens', step=1, minimum=1) }}
+        {{ field('request_timeout', 'Request timeout (seconds)', minimum=1) }}
+        {{ field('audit_price_ceiling', 'Price audit ceiling ($, optional)', minimum='0.01') }}
+        {{ field('fixed_min_price', 'Fixed seller floor ($, optional)', minimum='0.01') }}
+        {{ listfield('reference_prices', 'Reference price grid ($, optional)') }}
+      </div>
+    </details>
+    <div class="form-footer">
+      <div><strong id="trial-count">—</strong><span class="muted"> scheduled trials</span></div>
+      <button type="submit">Start experiment</button>
+    </div>
+  </form>
+</section>
+{% include "_runs.html" %}
+{% endblock %}

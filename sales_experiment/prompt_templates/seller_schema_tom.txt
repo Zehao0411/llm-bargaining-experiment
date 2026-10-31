@@ -1,0 +1,15 @@
+{
+  "buyer_model": {
+    "estimated_wtp_band": "below_floor|near_floor|70_to_80|above_80|uncertain",
+    "counteroffer_credibility": "low|medium|high",
+    "urgency": "low|medium|high",
+    "deal_risk": "low|medium|high",
+    "signals": ["short evidence from buyer messages"]
+  },
+  "strategy": {
+    "action": "hold_price|concede|accept_counter|final_offer|walk_away",
+    "reason": "one short private reason for this move"
+  },
+  "message": "what you say to the buyer",
+  "offer_price": number_or_null
+}

@@ -1,0 +1,35 @@
+{
+  "model_id": "gpt-5.4",
+  "temperature": 0.7,
+  "repetitions": 30,
+  "max_rounds": 100,
+  "max_tokens": 500,
+  "request_timeout": 120.0,
+  "product_cost": 40.0,
+  "reference_price": 80.0,
+  "knowledge_condition": "seller_only",
+  "use_tom_prompt": false,
+  "wtp_distribution": "normal",
+  "wtp_min": 50.0,
+  "wtp_max": 110.0,
+  "wtp_mean": 80.0,
+  "wtp_sd": 10.0,
+  "random_seed": null,
+  "parallel_workers": 5,
+  "discounts": [
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5
+  ],
+  "incentives": [
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5
+  ],
+  "include_high_price_no_incentive": true,
+  "audit_price_ceiling": 150.0
+}

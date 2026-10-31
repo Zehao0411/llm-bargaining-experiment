@@ -1,0 +1,1 @@
+{"message": "what you say to the buyer", "offer_price": number_or_null}

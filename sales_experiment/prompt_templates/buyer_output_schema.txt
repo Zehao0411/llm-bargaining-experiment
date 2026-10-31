@@ -1,0 +1,1 @@
+{"message": "what you say to the seller", "status": "continue|accepted|rejected", "accepted_price": number_or_null}

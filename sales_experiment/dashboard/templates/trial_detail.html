@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Trial {{ trial.trial_index }} · Bargaining Experiments{% endblock %}
+{% block nav %}<a href="{{ url_for('index') }}">Experiments</a><span>/</span><a href="{{ url_for('run_detail', run_id=run.run_id) }}">{{ run.run_id }}</a><span>/</span>Trial {{ trial.trial_index }}{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="title-row"><h1>Trial {{ trial.trial_index }}</h1><span class="badge outcome-{{ trial.outcome }}">{{ trial.outcome|replace('_', ' ') }}</span></div>
+  <div class="stats">
+    <span><strong>Discretion</strong>{{ trial.discount_label|rate_label }}</span><span><strong>Commission</strong>{{ trial.incentive_label|rate_label }}</span>
+    <span><strong>Buyer valuation</strong>{{ trial.wtp|money }}</span><span><strong>Seller floor</strong>{{ trial.min_price|money }}</span>
+    <span><strong>Price</strong>{{ trial.final_price|money }}</span><span><strong>Rounds</strong>{{ trial.rounds_used }}</span>
+    <span><strong>Gross earnings</strong>{{ trial.total_profit|money }}</span><span><strong>Firm earnings</strong>{{ trial.company_earnings|money }}</span><span><strong>Seller commission</strong>{{ trial.seller_earnings|money }}</span>
+    <span><strong>Input tokens</strong>{{ trial.input_tokens }}</span><span><strong>Output tokens</strong>{{ trial.output_tokens }}</span>
+  </div>
+  {% if trial.error %}<p class="notice error">{{ trial.error }}</p>{% endif %}
+  {% if row and trial.outcome == 'deal' %}
+  <p class="notice {{ 'success' if row.audit.valid_agreement else 'warning' }}">{% if row.audit.valid_agreement %}The agreement satisfies the price audit.{% else %}Excluded from monetary summaries:{% if row.audit.above_audit_ceiling %} price exceeds the audit ceiling;{% endif %}{% if row.audit.below_seller_floor %} price is below the seller floor;{% endif %}{% if row.audit.above_buyer_wtp %} price exceeds buyer valuation;{% endif %}{% if row.audit.missing_or_nonfinite_price %} no valid numerical price;{% endif %}{% endif %}</p>
+  {% endif %}
+</section>
+<section class="panel">
+  <h1>Conversation</h1>
+  {% for turn in trial.transcript %}
+  <article class="turn {{ turn.role }}">
+    <div class="turn-head"><strong>{{ turn.role|capitalize }}</strong><span>Round {{ turn.round }}</span></div>
+    {% if turn.parsed and turn.parsed.get('message') %}<p class="turn-message">{{ turn.parsed.message }}</p>{% endif %}
+    <p class="turn-meta">{% if turn.role == 'seller' and turn.parsed.get('offer_price') is not none %}Offer {{ turn.parsed.offer_price|money }}{% elif turn.role == 'buyer' %}{{ turn.parsed.get('status', '')|capitalize }}{% if turn.parsed.get('accepted_price') is not none %} · Accepted price {{ turn.parsed.accepted_price|money }}{% endif %}{% endif %}</p>
+    <details><summary>Structured output</summary><pre>{{ turn.parsed|tojson(indent=2) }}</pre></details>
+    <details><summary>Raw response</summary><pre>{{ turn.raw }}</pre></details>
+  </article>
+  {% else %}<p class="empty">No conversation was recorded.</p>{% endfor %}
+</section>
+{% endblock %}
